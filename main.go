@@ -61,20 +61,20 @@ func forwardAndLogStream(target io.Reader, proxy io.Writer, logFile *os.File, pr
 	for {
 		line, err := reader.ReadString('\n')
 		if len(line) > 0 {
-			// 统一处理前缀
+			// unified prefix handling
 			logPrefix := prefix
 			if prefix == "out: " || prefix == "STDERR" {
 				logPrefix = prefix
 			}
 			if strings.HasPrefix(line, logPrefix+" ") {
-				// 已有前缀，直接写日志
+				// already has prefix, write log directly
 				if !strings.HasSuffix(line, "\n") {
 					logFile.WriteString(line + "\n")
 				} else {
 					logFile.WriteString(line)
 				}
 			} else {
-				// 没有前缀，加前缀写日志
+				// no prefix, add prefix and write log
 				if !strings.HasSuffix(line, "\n") {
 					logFile.WriteString(logPrefix + line + "\n")
 				} else {
@@ -82,7 +82,7 @@ func forwardAndLogStream(target io.Reader, proxy io.Writer, logFile *os.File, pr
 				}
 			}
 			logFile.Sync()
-			// 输出到 proxy
+			// write to proxy
 			proxy.Write([]byte(line))
 		}
 		if err != nil {

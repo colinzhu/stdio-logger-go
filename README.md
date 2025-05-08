@@ -27,14 +27,14 @@ $ ./stdio-logger-go <command> [args...]
 
 Example:
 ```bash
-$ ./stdio-logger-go echo "Hello World"
+$ ./stdio-logger-go java -h
 ```
 
-The program will create a log file named `stdio_io.log` in the same directory as the executable.
+The program will create a log file named `stdio.log` in the same directory as the executable.
 
 ## Output
 
 The log file will contain entries with prefixes:
-- `输入:` for standard input
-- `输出:` for standard output
+- `in:  ` for standard input
+- `out: ` for standard output
 - `STDERR:` for standard error
