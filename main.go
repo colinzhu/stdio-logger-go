@@ -8,8 +8,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 // forwardAndLogStdin reads from proxy's stdin, logs it, and writes to target's stdin
@@ -20,8 +22,9 @@ func forwardAndLogStdin(proxyStdin io.Reader, targetStdin io.WriteCloser, logFil
 	for {
 		n, err := proxyStdin.Read(buffer)
 		if n > 0 {
-			// Write to log file with "in:  " prefix
-			logData := append([]byte("in:  "), buffer[:n]...)
+			// Write to log file with ISO timestamp and "in:  " prefix
+			timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.000Z07:00")
+			logData := append([]byte(timestamp+" in:  "), buffer[:n]...)
 			_, logErr := logFile.Write(logData)
 			if logErr != nil {
 				log.Printf("Error writing to log file: %v", logErr)
@@ -47,7 +50,8 @@ func forwardAndLogStdin(proxyStdin io.Reader, targetStdin io.WriteCloser, logFil
 	if closeErr := targetStdin.Close(); closeErr != nil {
 		log.Printf("Error closing target stdin: %v", closeErr)
 	}
-	_, err := logFile.WriteString("--- STDIN stream closed to target ---\n")
+	timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.000Z07:00")
+	_, err := logFile.WriteString(timestamp + " --- STDIN stream closed to target ---\n")
 	if err != nil {
 		log.Printf("Error writing to log file: %v", err)
 	}
@@ -66,19 +70,20 @@ func forwardAndLogStream(target io.Reader, proxy io.Writer, logFile *os.File, pr
 			if prefix == "out: " || prefix == "STDERR" {
 				logPrefix = prefix
 			}
+			timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.000Z07:00")
 			if strings.HasPrefix(line, logPrefix+" ") {
-				// already has prefix, write log directly
+				// already has prefix, write log directly (still add timestamp)
 				if !strings.HasSuffix(line, "\n") {
-					logFile.WriteString(line + "\n")
+					logFile.WriteString(timestamp + " " + line + "\n")
 				} else {
-					logFile.WriteString(line)
+					logFile.WriteString(timestamp + " " + line)
 				}
 			} else {
 				// no prefix, add prefix and write log
 				if !strings.HasSuffix(line, "\n") {
-					logFile.WriteString(logPrefix + line + "\n")
+					logFile.WriteString(timestamp + " " + logPrefix + line + "\n")
 				} else {
-					logFile.WriteString(logPrefix + line)
+					logFile.WriteString(timestamp + " " + logPrefix + line)
 				}
 			}
 			logFile.Sync()
@@ -102,7 +107,10 @@ func main() {
 	args := os.Args[2:]
 
 	// Create log file path in same directory as executable
-	exePath, _ := os.Executable()
+	exePath, err := os.Executable()
+	if err != nil {
+		log.Fatalf("Error getting executable path: %v", err)
+	}
 	logFilePath := filepath.Join(filepath.Dir(exePath), "stdio.log")
 
 	// Open log file in append mode
@@ -116,8 +124,17 @@ func main() {
 		}
 	}()
 
-	// Create the command with all arguments
-	cmd := exec.Command(command, args...)
+	// Detect OS and wrap command if needed
+	var cmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		// Use cmd.exe /C for Windows built-in commands
+		allArgs := append([]string{"/C", command}, args...)
+		cmd = exec.Command("cmd.exe", allArgs...)
+	} else {
+		// Use sh -c for Unix-like systems
+		fullCmd := append([]string{command}, args...)
+		cmd = exec.Command("sh", "-c", strings.Join(fullCmd, " "))
+	}
 
 	// Set up pipes for stdin, stdout and stderr
 	pipeStdin, err := cmd.StdinPipe()
