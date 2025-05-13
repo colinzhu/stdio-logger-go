@@ -67,7 +67,7 @@ func forwardAndLogStream(target io.Reader, proxy io.Writer, logFile *os.File, pr
 		if len(line) > 0 {
 			// unified prefix handling
 			logPrefix := prefix
-			if prefix == "out: " || prefix == "STDERR" {
+			if prefix == "out: " || prefix == "err: " {
 				logPrefix = prefix
 			}
 			timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.000Z07:00")
@@ -111,7 +111,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error getting executable path: %v", err)
 	}
-	logFilePath := filepath.Join(filepath.Dir(exePath), "stdio.log")
+	timestamp := time.Now().UTC().Format("2006-01-02_150405")
+	logFileName := fmt.Sprintf("stdio-%s.log", timestamp)
+	logFilePath := filepath.Join(filepath.Dir(exePath), logFileName)
 
 	// Open log file in append mode
 	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -176,7 +178,7 @@ func main() {
 
 	// Start forwarding stderr
 	wg.Add(1)
-	go forwardAndLogStream(pipeStderr, os.Stderr, logFile, "STDERR", &wg)
+	go forwardAndLogStream(pipeStderr, os.Stderr, logFile, "err: ", &wg)
 
 	// Wait for all goroutines to finish
 	wg.Wait()
