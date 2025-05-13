@@ -30,11 +30,11 @@ Example:
 $ ./stdio-logger-go java -h
 ```
 
-The program will create a log file named `stdio.log` in the same directory as the executable.
+The program will create a log file like `stdio-20250513_235959.log` in the same directory as the executable.
 
 ## Output
 
 The log file will contain entries with prefixes:
 - `in:  ` for standard input
 - `out: ` for standard output
-- `STDERR:` for standard error
+- `err: ` for standard error
