@@ -65,13 +65,8 @@ func forwardAndLogStream(target io.Reader, proxy io.Writer, logFile *os.File, pr
 	for {
 		line, err := reader.ReadString('\n')
 		if len(line) > 0 {
-			// unified prefix handling
-			logPrefix := prefix
-			if prefix == "out: " || prefix == "err: " {
-				logPrefix = prefix
-			}
 			timestamp := time.Now().UTC().Format("2006-01-02T15:04:05.000Z07:00")
-			if strings.HasPrefix(line, logPrefix+" ") {
+			if strings.HasPrefix(line, prefix+" ") {
 				// already has prefix, write log directly (still add timestamp)
 				if !strings.HasSuffix(line, "\n") {
 					logFile.WriteString(timestamp + " " + line + "\n")
@@ -81,9 +76,9 @@ func forwardAndLogStream(target io.Reader, proxy io.Writer, logFile *os.File, pr
 			} else {
 				// no prefix, add prefix and write log
 				if !strings.HasSuffix(line, "\n") {
-					logFile.WriteString(timestamp + " " + logPrefix + line + "\n")
+					logFile.WriteString(timestamp + " " + prefix + line + "\n")
 				} else {
-					logFile.WriteString(timestamp + " " + logPrefix + line)
+					logFile.WriteString(timestamp + " " + prefix + line)
 				}
 			}
 			logFile.Sync()
